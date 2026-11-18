@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ceviche_challenges.waveguide_bend.model
-import ceviche_challenges.waveguide_bend.prefabs
-import ceviche_challenges.waveguide_bend.spec
+from ceviche_challenges.waveguide_bend import model as model
+from ceviche_challenges.waveguide_bend import prefabs as prefabs
+from ceviche_challenges.waveguide_bend import spec as spec
