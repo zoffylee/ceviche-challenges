@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ceviche_challenges.wdm.model
-import ceviche_challenges.wdm.prefabs
-import ceviche_challenges.wdm.spec
+from ceviche_challenges.wdm import model as model
+from ceviche_challenges.wdm import prefabs as prefabs
+from ceviche_challenges.wdm import spec as spec
