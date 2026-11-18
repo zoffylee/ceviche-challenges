@@ -81,71 +81,73 @@ of the design region).
 """
 
 import dataclasses
-from typing import Optional, Sequence, Tuple
+from typing import cast
 
 from ceviche_challenges import units as u
 
 Q = u.Quantity  # pylint: disable=invalid-name
-QSequence = Sequence[Q]  # pylint: disable=invalid-name
+QSequence = u.Sequence  # pylint: disable=invalid-name
 
 
 @dataclasses.dataclass(frozen=True)
 class BeamSplitterSpec:
-  """Parameters specifying the physical structure of the 2D beam splitter.
+    """Parameters specifying the physical structure of the 2D beam splitter.
 
-  Note: the (i, j) coordinate origin is at the SW corner of the structure
-    in the design plane; see the module docstring above for a picture. We use a
-    convention where `i` corresponds to `x` and `j` corresponds to `y`.
+    Note: the (i, j) coordinate origin is at the SW corner of the structure
+      in the design plane; see the module docstring above for a picture. We use a
+      convention where `i` corresponds to `x` and `j` corresponds to `y`.
 
-  Attributes:
-    wg_width: the width (along j) of the waveguides.
-    wg_length: the length (along i) of the waveguides on either side of the
-      design region.
-    wg_separation: the separation distance (along j) between the waveguides.
-    wg_mode_padding: the length we should look around the waveguide in each
-      direction in our computation of the modes.
-    port_pml_offset: the offset between the ports and the PML
-    variable_region_size: a sequence specifying the size of the design variable
-      region.
-    cladding_permittivity: the relative permittivity of the cladding surrounding
-      the slab.  Also used as the permittivity for design pixels valued `0`.
-    slab_permittivity: the relative permittivity within the slab, as well as the
-      permittivity value for design pixels valued `1`.
-    input_monitor_offset: The offset of the input monitor  from the input
-      source, along i.
-    design_symmetry: A string specifying the symmetry of the design in the
-      design region. Options are 'x', 'xy', or None. See the module docstring
-      above for a description of this property.
-    pml_width: the integer number of PML cells we should use within the volume
-      at the ends of each axis.
-  """
-  wg_width: Q
-  wg_length: Q
-  wg_separation: Q
-  wg_mode_padding: Q
-  port_pml_offset: Q
-  variable_region_size: QSequence
-  cladding_permittivity: float
-  slab_permittivity: float
-  input_monitor_offset: Q
-  design_symmetry: Optional[str]
-  pml_width: int
-
-  def __post_init__(self):
-    assert self.wg_separation >= 2 * self.wg_mode_padding
-    assert self.variable_region_size[1] >= 2 * self.wg_width + self.wg_separation
-
-  def extent_ij(self, resolution: Q) -> Tuple[Q, Q]:
-    """The total in-plane extent of the structure.
-
-    Args:
-      resolution: The resolution of the simulation.
-
-    Returns:
-      The total in-plane extent of the structure, as a tuple (i, j) of
-        positions.
+    Attributes:
+      wg_width: the width (along j) of the waveguides.
+      wg_length: the length (along i) of the waveguides on either side of the
+        design region.
+      wg_separation: the separation distance (along j) between the waveguides.
+      wg_mode_padding: the length we should look around the waveguide in each
+        direction in our computation of the modes.
+      port_pml_offset: the offset between the ports and the PML
+      variable_region_size: a sequence specifying the size of the design variable
+        region.
+      cladding_permittivity: the relative permittivity of the cladding surrounding
+        the slab.  Also used as the permittivity for design pixels valued `0`.
+      slab_permittivity: the relative permittivity within the slab, as well as the
+        permittivity value for design pixels valued `1`.
+      input_monitor_offset: The offset of the input monitor  from the input
+        source, along i.
+      design_symmetry: A string specifying the symmetry of the design in the
+        design region. Options are 'x', 'xy', or None. See the module docstring
+        above for a description of this property.
+      pml_width: the integer number of PML cells we should use within the volume
+        at the ends of each axis.
     """
-    vi, vj = self.variable_region_size
-    extent_i = 2 * self.pml_width * resolution + 2 * self.wg_length + vi
-    extent_j = 2 * self.pml_width * resolution + 2 * self.wg_mode_padding + vj
-    return (extent_i, extent_j)
+
+    wg_width: Q
+    wg_length: Q
+    wg_separation: Q
+    wg_mode_padding: Q
+    port_pml_offset: Q
+    variable_region_size: QSequence
+    cladding_permittivity: float
+    slab_permittivity: float
+    input_monitor_offset: Q
+    design_symmetry: str | None
+    pml_width: int
+
+    def __post_init__(self):
+        assert self.wg_separation >= 2 * self.wg_mode_padding
+        assert self.variable_region_size[1] >= 2 * self.wg_width + self.wg_separation
+
+    def extent_ij(self, resolution: Q) -> tuple[Q, Q]:
+        """The total in-plane extent of the structure.
+
+        Args:
+          resolution: The resolution of the simulation.
+
+        Returns:
+          The total in-plane extent of the structure, as a tuple (i, j) of
+            positions.
+        """
+        vi, vj = self.variable_region_size
+        extent_i = 2 * self.pml_width * resolution + 2 * self.wg_length + vi
+        extent_j = 2 * self.pml_width * resolution + 2 * self.wg_mode_padding + vj
+        # unyt preserves units here, but NumPy's stubs describe the arithmetic as ndarray.
+        return cast(tuple[Q, Q], (extent_i, extent_j))

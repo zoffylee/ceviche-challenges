@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ceviche_challenges.beam_splitter.model
-import ceviche_challenges.beam_splitter.prefabs
-import ceviche_challenges.beam_splitter.spec
+from ceviche_challenges.beam_splitter import model as model
+from ceviche_challenges.beam_splitter import prefabs as prefabs
+from ceviche_challenges.beam_splitter import spec as spec
