@@ -1,5 +1,7 @@
 # Ceviche Challenges: Photonic Inverse Design Suite
 
+**English** | [简体中文](README.zh-CN.md)
+
 The `ceviche_challenges` module contains a suite of photonic inverse design
 challenge problems, backed by the open source
 [`ceviche`](https://github.com/fancompute/ceviche/) finite difference frequency
@@ -12,27 +14,27 @@ includes several integrated photonic components, including a waveguide beam
 splitter, a waveguide mode converter, a waveguide bend, and a wavelength
 division multiplexer (WDM).
 
-The code in this module was used to produce the results in the
-[Inverse Design of Photonic Devices with Strict Foundry Fabrication Constraints](https://doi.org/10.1021/acsphotonics.2c00313)
-paper.
+This port carries over the design tasks from the original Ceviche Challenges
+implementation used in the experiments reported in
+[Inverse Design of Photonic Devices with Strict Foundry Fabrication Constraints](https://doi.org/10.1021/acsphotonics.2c00313).
 
 ## Challenge problems
 
 ### Waveguide bend
 
-![Waveguide bend](/img/waveguide_bend.png)
+![Waveguide bend](img/waveguide_bend.png)
 
 ### Beam splitter
 
-![Beam splitter](/img/beam_splitter.png)
+![Beam splitter](img/beam_splitter.png)
 
 ### Mode converter
 
-![Mode converter](/img/mode_converter.png)
+![Mode converter](img/mode_converter.png)
 
 ### Wavelength division multiplexer (WDM)
 
-![Wavelength division multiplexer (WDM)](/img/wavelength_divison_multiplexer.png)
+![Wavelength division multiplexer (WDM)](img/wavelength_divison_multiplexer.png)
 
 ## Installation
 
@@ -44,6 +46,11 @@ submodule in editable mode.
 ```sh
 git submodule update --init --recursive
 uv sync --locked
+```
+
+Use these commands for local development checks from the repository root.
+
+```sh
 uv run --locked ruff check ceviche_challenges
 uv run --locked ruff format --check ceviche_challenges
 uv run --locked ty check
@@ -51,6 +58,12 @@ uv run --locked pytest
 ```
 
 ## Usage
+
+Save the following Python examples in order in a file such as `example.py` at
+the repository root and run `uv run --locked python example.py`. In VS Code
+with the Python extension, open the repository folder, choose
+**Python: Select Interpreter**, and select `.venv/Scripts/python.exe` on Windows
+or `.venv/bin/python` on Linux. Open the script and click **Run Python File**.
 
  `ceviche_challenges` provides several "prefab" component configurations, which
  live in the following submodules:
@@ -82,6 +95,11 @@ design = np.ones(model.design_variable_shape)
 s_params, fields = model.simulate(design)
 ```
 
+The axes of `s_params` are wavelength, excited port, and output port. The axes
+of `fields` are wavelength, excited port, x, and y. By default, `simulate()`
+excites port 0 and uses the wavelengths from the simulation parameters. Pass
+`excite_port_idxs` and `wavelengths_nm` to choose them explicitly.
+
 Pass a Torch tensor to get Torch outputs on the same device and differentiate a
 real-valued objective. Use a `float64` tensor for double precision. To run on an
 available CUDA device, create the tensor with `device="cuda"`. To tune the
@@ -103,10 +121,8 @@ loss_grad = design.grad
 NumPy inputs return NumPy arrays for forward simulation. Use Torch tensors to
 compute gradients.
 
-There are a number of other features in the device model class, such as
-returning an image of the structure. These features are best explored by reading
-the code and the function docstrings, as we don't have comprehensive standalone
-documentation at this time.
+Use `model.density(design)` to inspect the device's material distribution. See
+the model code and function docstrings for other interfaces.
 
 ## Citation
 
