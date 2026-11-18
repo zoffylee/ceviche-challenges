@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ceviche_challenges.mode_converter.model
-import ceviche_challenges.mode_converter.prefabs
-import ceviche_challenges.mode_converter.spec
+from ceviche_challenges.mode_converter import model as model
+from ceviche_challenges.mode_converter import prefabs as prefabs
+from ceviche_challenges.mode_converter import spec as spec

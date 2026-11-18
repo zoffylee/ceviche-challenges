@@ -13,75 +13,75 @@
 # limitations under the License.
 """Tests for ceviche_challenges.mode_converter.model."""
 
-import numpy as np
+import torch
+from absl.testing import absltest, parameterized
 
 from ceviche_challenges import units as u
 from ceviche_challenges.mode_converter import model as _model
 from ceviche_challenges.mode_converter import prefabs
 
-from absl.testing import absltest
-from absl.testing import parameterized
-
 _ATOL_SCATTERING_PARAMETERS = 1e-2
 
 
 class ModelScatteringTest(parameterized.TestCase):
-
-  @parameterized.named_parameters(
-      {
-          'testcase_name': '12_resolution_50nm',
-          'resolution': 50 * u.nm,
-          'spec_prefab_fn': prefabs.mode_converter_spec_12,
-      },
-      {
-          'testcase_name': '13_resolution_50nm',
-          'resolution': 50 * u.nm,
-          'spec_prefab_fn': prefabs.mode_converter_spec_13,
-      },
-      {
-          'testcase_name': '23_resolution_50nm',
-          'resolution': 50 * u.nm,
-          'spec_prefab_fn': prefabs.mode_converter_spec_23,
-      },
-      {
-          'testcase_name': '12_resolution_25nm',
-          'resolution': 25 * u.nm,
-          'spec_prefab_fn': prefabs.mode_converter_spec_12,
-      },
-      {
-          'testcase_name': '13_resolution_25nm',
-          'resolution': 25 * u.nm,
-          'spec_prefab_fn': prefabs.mode_converter_spec_13,
-      },
-      {
-          'testcase_name': '23_resolution_25nm',
-          'resolution': 25 * u.nm,
-          'spec_prefab_fn': prefabs.mode_converter_spec_23,
-      },
-  )
-  def test_scattering_matrix_symmetry(
-      self,
-      resolution=50 * u.nm,
-      spec_prefab_fn=prefabs.mode_converter_spec_12,
-  ):
-    """Test that the scattering matrix is symmetric (reciprocal)."""
-    params = prefabs.mode_converter_sim_params(resolution=resolution)
-    spec = spec_prefab_fn()
-    model = _model.ModeConverterModel(params, spec)
-
-    design_var = np.ones(model.design_variable_shape)
-    s_params, _ = model.simulate(
-        design_var,
-        excite_port_idxs=(0, 1),
+    @parameterized.named_parameters(
+        {
+            "testcase_name": "12_resolution_50nm",
+            "resolution": 50 * u.nm,
+            "spec_prefab_fn": prefabs.mode_converter_spec_12,
+        },
+        {
+            "testcase_name": "13_resolution_50nm",
+            "resolution": 50 * u.nm,
+            "spec_prefab_fn": prefabs.mode_converter_spec_13,
+        },
+        {
+            "testcase_name": "23_resolution_50nm",
+            "resolution": 50 * u.nm,
+            "spec_prefab_fn": prefabs.mode_converter_spec_23,
+        },
+        {
+            "testcase_name": "12_resolution_25nm",
+            "resolution": 25 * u.nm,
+            "spec_prefab_fn": prefabs.mode_converter_spec_12,
+        },
+        {
+            "testcase_name": "13_resolution_25nm",
+            "resolution": 25 * u.nm,
+            "spec_prefab_fn": prefabs.mode_converter_spec_13,
+        },
+        {
+            "testcase_name": "23_resolution_25nm",
+            "resolution": 25 * u.nm,
+            "spec_prefab_fn": prefabs.mode_converter_spec_23,
+        },
     )
-    s = np.abs(s_params.squeeze())
-    # Check overall scattering matrix symmetry
-    np.testing.assert_allclose(
-        s,
-        s.T,
-        atol=_ATOL_SCATTERING_PARAMETERS,
-    )
+    def test_scattering_matrix_symmetry(
+        self,
+        resolution=50 * u.nm,
+        spec_prefab_fn=prefabs.mode_converter_spec_12,
+    ):
+        """Test that the scattering matrix is symmetric (reciprocal)."""
+        params = prefabs.mode_converter_sim_params(resolution=resolution)
+        spec = spec_prefab_fn()
+        model = _model.ModeConverterModel(params, spec)
+
+        design_var = torch.ones(model.design_variable_shape, dtype=torch.float64)
+        s_params, fields = model.simulate(
+            design_var,
+            excite_port_idxs=(0, 1),
+        )
+        self.assertEqual(s_params.dtype, torch.complex128)
+        self.assertEqual(fields.dtype, torch.complex128)
+        s = s_params.abs().squeeze()
+        # Check overall scattering matrix symmetry
+        torch.testing.assert_close(
+            s,
+            s.T,
+            atol=_ATOL_SCATTERING_PARAMETERS,
+            rtol=0,
+        )
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()
