@@ -13,50 +13,26 @@
 # limitations under the License.
 """Tests for ceviche_challenges.primitives."""
 
-from collections.abc import Callable
-from typing import Any
-
-import autograd
-import autograd.numpy as _autograd_numpy
 import numpy as np
+import torch
 from absl.testing import absltest
 
 from ceviche_challenges import primitives
-
-# Autograd installs the NumPy API dynamically.
-npa: Any = _autograd_numpy
-
-
-def _gradient_numerical(
-    func: Callable[[np.ndarray], float], x: np.ndarray, delta: float = 1e-7
-) -> np.ndarray:
-    """Helper for numerically computing the gradient of an R^n -> R^1 function."""
-    y = func(x)
-    grad = np.zeros_like(x)
-    for i in range(x.size):
-        x_delta = np.copy(x)
-        x_delta.ravel()[i] += delta
-        y_delta = func(x_delta)
-        grad.ravel()[i] = (y_delta - y) / delta
-    return grad
 
 
 class PrimitivesTest(absltest.TestCase):
     def test_grad_insert_design_variable(self):
         """Test the gradient of the `insert_design_variable` primitive."""
 
-        destination = np.ones((10, 10), dtype=np.float64)
-        design_var = np.ones((5, 5), dtype=np.float64)
+        destination = torch.ones((10, 10), dtype=torch.float64, requires_grad=True)
+        design_var = torch.linspace(0.5, 1.5, 25, dtype=torch.float64).reshape(5, 5)
+        design_var.requires_grad_()
         coords = (3, 4, 8, 9)
 
-        def func(x):
-            y0 = npa.square(x) - 1.0
-            y1 = primitives.insert_design_variable(y0, destination, coords)
-            return npa.sum(y1)
-
-        self.assertTrue(
-            np.allclose(autograd.grad(func)(design_var), _gradient_numerical(func, design_var))
-        )
+        density = primitives.insert_design_variable(design_var.square() - 1, destination, coords)
+        density.sum().backward()
+        torch.testing.assert_close(design_var.grad, 2 * design_var.detach())
+        self.assertIsNone(destination.grad)
 
     def test_insert_design_variable_invalid(self):
         """Test that a ValueError is thrown for invalid coords or design vars."""

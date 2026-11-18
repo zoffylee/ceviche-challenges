@@ -13,19 +13,14 @@
 # limitations under the License.
 """Helper functions for operations on VectorField types."""
 
-from typing import Any
-
-import autograd.numpy as _autograd_numpy
+import numpy as np
 import torch
 
 from ceviche_challenges import defs
 
-# Autograd installs the NumPy API dynamically.
-npa: Any = _autograd_numpy
-
 
 def _conjugate(value: defs.FieldComponent) -> defs.FieldComponent:
-    return value.conj() if isinstance(value, torch.Tensor) else npa.conj(value)
+    return value.conj() if isinstance(value, torch.Tensor) else np.conj(value)
 
 
 def cross(a: defs.VectorField, b: defs.VectorField) -> defs.VectorField:
@@ -56,4 +51,4 @@ def overlap(
     ax, ay, az = a
     ac = (_conjugate(ax), _conjugate(ay), _conjugate(az))
     integrand = cross(ac, b)[normal.index]
-    return integrand.sum() if isinstance(integrand, torch.Tensor) else npa.sum(integrand)
+    return integrand.sum() if isinstance(integrand, torch.Tensor) else np.sum(integrand)

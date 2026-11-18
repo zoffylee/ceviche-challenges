@@ -15,13 +15,11 @@
 
 import numpy as np
 import torch
-from autograd.extend import defvjp, primitive
 from ceviche.tensor import as_tensor
 
 from ceviche_challenges import defs
 
 
-@primitive
 def insert_design_variable(
     design_var: defs.Array, destination: defs.Array, coords: tuple[int, int, int, int]
 ) -> defs.Array:
@@ -65,11 +63,3 @@ def insert_design_variable(
         destination_ = np.copy(destination)
     destination_[x_min:x_max, y_min:y_max] = design_var
     return destination_
-
-
-def vjp_maker(ans, design_var, destination, coords):
-    del ans, design_var, destination
-    return lambda x: x[coords[0] : coords[2], coords[1] : coords[3]]
-
-
-defvjp(insert_design_variable, vjp_maker, None, None)

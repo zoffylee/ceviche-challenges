@@ -22,8 +22,6 @@ from typing import cast, overload
 import ceviche
 import numpy as np
 import torch
-from autograd.extend import Box, defvjp, primitive
-from autograd.tracer import getval
 from ceviche.tensor import as_tensor, to_numpy
 
 from ceviche_challenges import defs, modes, primitives
@@ -34,27 +32,6 @@ from ceviche_challenges.scattering import calculate_amplitudes
 def _wavelengths_nm_to_omegas(wavelengths_nm: np.ndarray) -> np.ndarray:
     """Convert array of wavelengths to array of angular frequencies for ceviche."""
     return 2 * np.pi * u.c.to_value("nm/s") / wavelengths_nm
-
-
-@primitive
-def _numpy_with_torch_vjp(design, tensor_design, outputs):
-    return tuple(to_numpy(output) for output in outputs)
-
-
-def _torch_vjp(_answer, design, tensor_design, outputs):
-    def vjp(cotangents):
-        # HIPS and Torch use conjugate conventions for complex cotangents.
-        gradients = tuple(
-            as_tensor(value, dtype=output.dtype).conj()
-            for value, output in zip(cotangents, outputs)
-        )
-        (gradient,) = torch.autograd.grad(outputs, tensor_design, gradients, retain_graph=True)
-        return to_numpy(gradient.conj()).astype(design.dtype, copy=False)
-
-    return vjp
-
-
-defvjp(_numpy_with_torch_vjp, _torch_vjp)
 
 
 class Model(abc.ABC):
@@ -186,14 +163,6 @@ class Model(abc.ABC):
         if wavelengths_nm.ndim != 1 or wavelengths_nm.size == 0:
             raise ValueError("`wavelengths_nm` arg must be a non-empty rank-1 array.")
         omegas = _wavelengths_nm_to_omegas(wavelengths_nm)
-
-        if isinstance(design_variable, Box):
-            with torch.enable_grad():
-                design = as_tensor(getval(design_variable)).requires_grad_()
-                outputs = self._simulate_tensor(
-                    design, excite_port_idxs, omegas, max_parallelizm, solver_options
-                )
-            return _numpy_with_torch_vjp(design_variable, design, outputs)
 
         s_params, fields = self._simulate_tensor(
             design_variable, excite_port_idxs, omegas, max_parallelizm, solver_options

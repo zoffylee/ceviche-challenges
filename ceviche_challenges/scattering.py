@@ -18,17 +18,11 @@ NOTE: these are currently only implemented for the TM (Ez) polarization and NOT
 the TE (Hz) polarization
 """
 
-from typing import Any
-
-import autograd.numpy as _autograd_numpy
 import numpy as np
 import torch
 from ceviche.tensor import as_tensor
 
 from ceviche_challenges import defs, modes, ops
-
-# Autograd installs the NumPy API dynamically.
-npa: Any = _autograd_numpy
 
 
 def calculate_amplitudes(
@@ -88,7 +82,7 @@ def calculate_amplitudes(
     overlap2 = ops.overlap(hm, e, port.dir)
     normalization = 2 * ops.overlap(em, hm, port.dir)
     scale = 2 * (
-        normalization.sqrt() if isinstance(normalization, torch.Tensor) else npa.sqrt(normalization)
+        normalization.sqrt() if isinstance(normalization, torch.Tensor) else np.sqrt(normalization)
     )
 
     # Phase convention in ceviche is exp(+jwt-jkz)

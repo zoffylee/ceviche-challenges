@@ -13,9 +13,6 @@
 # limitations under the License.
 """A model of a waveguide beam splitter with one design region, in ceviche."""
 
-from typing import Any
-
-import autograd.numpy as _autograd_numpy
 import numpy as np
 import torch
 
@@ -24,9 +21,6 @@ from ceviche_challenges import params as _params
 from ceviche_challenges import units as u
 from ceviche_challenges.beam_splitter import spec as _spec
 
-# Autograd installs the NumPy API dynamically.
-npa: Any = _autograd_numpy
-
 
 def _mirror_columns(design: defs.Array, width: int) -> defs.Array:
     """Reflect the design, excluding the center column when the width is odd."""
@@ -34,7 +28,7 @@ def _mirror_columns(design: defs.Array, width: int) -> defs.Array:
     if isinstance(design, torch.Tensor):
         return torch.cat((design, design[:, :half_width].flip((1,))), dim=1)
     reflected = design[:, :half_width]
-    return npa.hstack((design, npa.fliplr(reflected)))
+    return np.hstack((design, np.fliplr(reflected)))
 
 
 class BeamSplitterModel(model_base.Model):

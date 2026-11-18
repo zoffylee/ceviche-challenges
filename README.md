@@ -44,6 +44,9 @@ submodule in editable mode.
 ```sh
 git submodule update --init --recursive
 uv sync --locked
+uv run --locked ruff check ceviche_challenges
+uv run --locked ruff format --check ceviche_challenges
+uv run --locked ty check
 uv run --locked pytest
 ```
 
@@ -97,8 +100,8 @@ loss_value = loss.item()
 loss_grad = design.grad
 ```
 
-NumPy inputs return NumPy arrays. Existing HIPS autograd objectives can still
-use first-order reverse-mode gradients on CPU.
+NumPy inputs return NumPy arrays for forward simulation. Use Torch tensors to
+compute gradients.
 
 There are a number of other features in the device model class, such as
 returning an image of the structure. These features are best explored by reading

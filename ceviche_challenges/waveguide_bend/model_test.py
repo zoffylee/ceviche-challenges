@@ -13,10 +13,6 @@
 # limitations under the License.
 """Tests for ceviche_challenges.waveguide_bend.model."""
 
-from typing import Any
-
-import autograd
-import autograd.numpy as _autograd_numpy
 import numpy as np
 import torch
 from absl.testing import absltest, parameterized
@@ -25,14 +21,11 @@ from ceviche_challenges import units as u
 from ceviche_challenges.waveguide_bend import model as _model
 from ceviche_challenges.waveguide_bend import prefabs
 
-# Autograd installs the NumPy API dynamically.
-npa: Any = _autograd_numpy
-
 _ATOL_SCATTERING_PARAMETERS = 1e-2
 
 
 class ModelScatteringTest(parameterized.TestCase):
-    def test_torch_and_legacy_gradients(self):
+    def test_torch_gradient_matches_finite_difference(self):
         model = _model.WaveguideBendModel(
             prefabs.waveguide_bend_sim_params(), prefabs.waveguide_bend_1umx1um_spec()
         )
@@ -42,22 +35,16 @@ class ModelScatteringTest(parameterized.TestCase):
 
         def objective(x):
             s_params, fields = model.simulate(x, wavelengths_nm=[1500.0, 1550.0])
-            xp = torch if isinstance(x, torch.Tensor) else npa
             return (
-                xp.real(s_params[:, 0, 1]).mean()
-                + 1e-5 * xp.imag(fields[:, 0, output.x, output.y]).mean()
+                s_params[:, 0, 1].real.mean() + 1e-5 * fields[:, 0, output.x, output.y].imag.mean()
             )
 
-        loss = objective(tensor_design)
-        loss.backward()
-        legacy_loss, legacy_grad = autograd.value_and_grad(objective)(design)
-        self.assertAlmostEqual(loss.item(), legacy_loss)
-        gradient = tensor_design.grad
-        assert gradient is not None
-        np.testing.assert_allclose(gradient.numpy(), legacy_grad, atol=1e-10)
+        objective(tensor_design).backward()
 
         step = 1e-5
         expected = (objective(design + step) - objective(design - step)) / (2 * step)
+        gradient = tensor_design.grad
+        assert gradient is not None
         self.assertGreater(gradient.norm().item(), 0)
         np.testing.assert_allclose(gradient.sum().item(), expected, rtol=1e-5, atol=1e-7)
         with torch.no_grad():
