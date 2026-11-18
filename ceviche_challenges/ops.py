@@ -13,37 +13,47 @@
 # limitations under the License.
 """Helper functions for operations on VectorField types."""
 
-# pytype: disable=module-attr
+from typing import Any
 
-import autograd.numpy as npa
+import autograd.numpy as _autograd_numpy
+import torch
 
 from ceviche_challenges import defs
 
+# Autograd installs the NumPy API dynamically.
+npa: Any = _autograd_numpy
+
+
+def _conjugate(value: defs.FieldComponent) -> defs.FieldComponent:
+    return value.conj() if isinstance(value, torch.Tensor) else npa.conj(value)
+
 
 def cross(a: defs.VectorField, b: defs.VectorField) -> defs.VectorField:
-  """Compute the cross product between two VectorFields."""
-  return (
-      a[1] * b[2] - a[2] * b[1],
-      a[2] * b[0] - a[0] * b[2],
-      a[0] * b[1] - a[1] * b[0],
-  )
+    """Compute the cross product between two VectorFields."""
+    return (
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    )
 
 
 def overlap(
     a: defs.VectorField,
     b: defs.VectorField,
     normal: defs.Direction,
-) -> float:
-  """Numerically compute the overlap integral of two VectorFields.
+) -> complex | torch.Tensor:
+    """Numerically compute the overlap integral of two VectorFields.
 
-  Args:
-    a: `VectorField` specifying the first field.
-    b: `VectorField` specifying the second field.
-    normal: `Direction` specifying the direction normal to the plane (or slice)
-      where the overlap is computed.
+    Args:
+      a: `VectorField` specifying the first field.
+      b: `VectorField` specifying the second field.
+      normal: `Direction` specifying the direction normal to the plane (or slice)
+        where the overlap is computed.
 
-  Returns:
-    Result of the overlap integral.
-  """
-  ac = tuple([npa.conj(ai) for ai in a])
-  return npa.sum(cross(ac, b)[normal.index])
+    Returns:
+      Result of the overlap integral.
+    """
+    ax, ay, az = a
+    ac = (_conjugate(ax), _conjugate(ay), _conjugate(az))
+    integrand = cross(ac, b)[normal.index]
+    return integrand.sum() if isinstance(integrand, torch.Tensor) else npa.sum(integrand)

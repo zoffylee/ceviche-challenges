@@ -18,15 +18,17 @@ NOTE: these are currently only implemented for the TM (Ez) polarization and NOT
 the TE (Hz) polarization
 """
 
-# pytype: disable=module-attr
+from typing import Any
 
-from typing import Tuple
-
-import autograd.numpy as npa
-from ceviche_challenges import defs
-from ceviche_challenges import modes
-from ceviche_challenges import ops
+import autograd.numpy as _autograd_numpy
 import numpy as np
+import torch
+from ceviche.tensor import as_tensor
+
+from ceviche_challenges import defs, modes, ops
+
+# Autograd installs the NumPy API dynamically.
+npa: Any = _autograd_numpy
 
 
 def calculate_amplitudes(
@@ -37,62 +39,58 @@ def calculate_amplitudes(
     hy: defs.Field,
     hx: defs.Field,
     epsilon_r: defs.Geometry,
-) -> Tuple[float, float]:
-  """Calculate amplitudes of the forward and backward waves at a port.
+) -> tuple[complex | torch.Tensor, complex | torch.Tensor]:
+    """Calculate amplitudes of the forward and backward waves at a port.
 
-  Args:
-    omega: `float` specifying the angular frequency of the mode, in units of
-      rad/sec.
-    dl: `float` specifying the spatial grid cell size, in units of meters.
-    port: `Port` specifying details of the mode calculation, e.g. order,
-      location, direction, etc.
-    ez: `Field` specifying the distribution of the z-component of the electric
-      field
-    hy: `Field` specifying the distribution of the y-component of the magnetic
-      field.
-    hx: `Field` specifying the distribution of the x-component of the magnetic
-      field.
-    epsilon_r: `Geometry` specifying the permitivitty distribution.
+    Args:
+      omega: `float` specifying the angular frequency of the mode, in units of
+        rad/sec.
+      dl: `float` specifying the spatial grid cell size, in units of meters.
+      port: `Port` specifying details of the mode calculation, e.g. order,
+        location, direction, etc.
+      ez: `Field` specifying the distribution of the z-component of the electric
+        field
+      hy: `Field` specifying the distribution of the y-component of the magnetic
+        field.
+      hx: `Field` specifying the distribution of the x-component of the magnetic
+        field.
+      epsilon_r: `Geometry` specifying the permitivitty distribution.
 
-  Returns:
-    A tuple consisting of the complex-valued scattering parameters, (s_+, s_-)
-    at the port.
-  """
-  coords = port.coords()
-  et_m, ht_m, _ = port.field_profiles(epsilon_r[coords], omega, dl)
+    Returns:
+      A tuple consisting of the complex-valued scattering parameters, (s_+, s_-)
+      at the port.
+    """
+    coords = port.coords()
+    et_m, ht_m, _ = port.field_profiles(epsilon_r[coords], omega, dl)
+    yee_offsets = np.array([[-1], [0]])
+    if isinstance(ez, torch.Tensor):
+        coords = tuple(torch.as_tensor(index, device=ez.device) for index in coords)
+        yee_offsets = torch.as_tensor(yee_offsets, device=ez.device)
+        et_m = as_tensor(et_m, device=ez.device, dtype=ez.dtype)
+        ht_m = as_tensor(ht_m, device=ez.device, dtype=ez.dtype)
 
-  if port.dir.is_along_x:
-    coords_offset = (coords[0] + port.signed_offset(), coords[1])
-    h = (0., npa.ravel(hy[coords_offset]), 0)
-    hm = (0., ht_m, 0.)
-    # The E-field is not co-located with the H-field in the Yee cell. Therefore,
-    # we must sample at two neighboring pixels in the propataion direction and
-    # then interpolate:
-    coords_e = (coords_offset[0] + np.array([[-1], [0]]), coords_offset[1])
-    e_yee_shifted = 0.5 * npa.sum(ez[coords_e], axis=0)
-  else:
-    coords_offset = (coords[0], coords[1] + port.signed_offset())
-    h = (npa.ravel(hx[coords_offset]), 0, 0)
-    hm = (-ht_m, 0., 0.)
-    # The E-field is not co-located with the H-field in the Yee cell. Therefore,
-    # we must sample at two neighboring pixels in the propataion direction and
-    # then interpolate:
-    coords_e = (coords_offset[0], coords_offset[1] + np.array([[-1], [0]]))
-    e_yee_shifted = 0.5 * npa.sum(ez[coords_e], axis=0)
+    if port.dir.is_along_x:
+        coords_offset = (coords[0] + port.signed_offset(), coords[1])
+        h = (0.0, hy[coords_offset], 0.0)
+        hm = (0.0, ht_m, 0.0)
+        coords_e = (coords_offset[0] + yee_offsets, coords_offset[1])
+    else:
+        coords_offset = (coords[0], coords[1] + port.signed_offset())
+        h = (hx[coords_offset], 0.0, 0.0)
+        hm = (-ht_m, 0.0, 0.0)
+        coords_e = (coords_offset[0], coords_offset[1] + yee_offsets)
 
-  e = (0., 0., e_yee_shifted)
-  em = (0., 0., et_m)
+    # Interpolate neighboring E samples onto the H locations on the Yee grid.
+    e = (0.0, 0.0, ez[coords_e].mean(0))
+    em = (0.0, 0.0, et_m)
 
-  overlap1 = ops.overlap(em, h, port.dir)
-  overlap2 = ops.overlap(hm, e, port.dir)
-  normalization = ops.overlap(em, hm, port.dir)
+    overlap1 = ops.overlap(em, h, port.dir)
+    overlap2 = ops.overlap(hm, e, port.dir)
+    normalization = 2 * ops.overlap(em, hm, port.dir)
+    scale = 2 * (
+        normalization.sqrt() if isinstance(normalization, torch.Tensor) else npa.sqrt(normalization)
+    )
 
-  # Phase convention in ceviche is exp(+jwt-jkz)
-  if port.dir.sign > 0:
-    s_p = (overlap1 + overlap2) / 2 / np.sqrt(2 * normalization)
-    s_m = (overlap1 - overlap2) / 2 / np.sqrt(2 * normalization)
-  else:
-    s_p = (overlap1 - overlap2) / 2 / np.sqrt(2 * normalization)
-    s_m = (overlap1 + overlap2) / 2 / np.sqrt(2 * normalization)
-
-  return s_p, s_m
+    # Phase convention in ceviche is exp(+jwt-jkz)
+    signed_overlap = port.dir.sign * overlap2
+    return (overlap1 + signed_overlap) / scale, (overlap1 - signed_overlap) / scale

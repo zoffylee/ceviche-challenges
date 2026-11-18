@@ -3,9 +3,8 @@
 The `ceviche_challenges` module contains a suite of photonic inverse design
 challenge problems, backed by the open source
 [`ceviche`](https://github.com/fancompute/ceviche/) finite difference frequency
-domain (FDFD) simulator, and packaged into a standard API for calculating
-scattering parameters and fields. Gradients and automatic differentiation
-capabilities are provided by [HIPS autograd](https://github.com/HIPS/autograd).
+domain (FDFD) simulator. This branch uses the PyTorch fork of Ceviche to
+compute scattering parameters, fields, and gradients.
 
 The suite of challenge problems may be used to benchmark different topology 
 optimization algorithms in designing relevant photonic components. The suite 
@@ -37,7 +36,7 @@ paper.
 
 ## Installation
 
-Development on the `pytorch` branch uses Python 3.12 and the PyTorch fork of
+`pytorch` is installed from source. It uses Python 3.12 and the PyTorch fork of
 `ceviche` pinned in `external/ceviche`. With SSH access to the submodule
 server, run these commands from the repository root. uv installs the
 submodule in editable mode.
@@ -45,14 +44,7 @@ submodule in editable mode.
 ```sh
 git submodule update --init --recursive
 uv sync --locked
-uv run pytest
-uv build
-```
-
-To install the published package with pip, run
-
-```
-pip install ceviche_challenges
+uv run --locked pytest
 ```
 
 ## Usage
@@ -87,26 +79,24 @@ design = np.ones(model.design_variable_shape)
 s_params, fields = model.simulate(design)
 ```
 
-The model class can also be used inside of an objective function to perform an
-optimization. Gradients and loss function automatic differentiation is supported
-by [HIPS autograd](https://github.com/HIPS/autograd).
+Pass a Torch tensor to get Torch outputs on the same device and differentiate a
+real-valued objective. Use a `float64` tensor for double precision. To run on an
+available CUDA device, create the tensor with `device="cuda"`.
 
 ```python
-import autograd
-import autograd.numpy as npa
+import torch
 
-# Construct a loss function, assuming the `model` and `design` from the code
-# snippet above are instantiated.
-
-def loss_fn(x):
-  """A simple loss function taking mean s11 - mean s21."""
-  s_params, _ = model.simulate(x)
-  s11 = npa.abs(s_params[:, 0, 0])
-  s21 = npa.abs(s_params[:, 0, 1])
-  return npa.mean(s11) - npa.mean(s21)
-
-loss_value, loss_grad = autograd.value_and_grad(loss_fn)(design)
+design = torch.ones(model.design_variable_shape, dtype=torch.float64,
+                    requires_grad=True)
+s_params, _ = model.simulate(design)
+loss = s_params[:, 0, 0].abs().mean() - s_params[:, 0, 1].abs().mean()
+loss.backward()
+loss_value = loss.item()
+loss_grad = design.grad
 ```
+
+NumPy inputs return NumPy arrays. Existing HIPS autograd objectives can still
+use first-order reverse-mode gradients on CPU.
 
 There are a number of other features in the device model class, such as
 returning an image of the structure. These features are best explored by reading

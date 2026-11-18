@@ -13,74 +13,78 @@
 # limitations under the License.
 """Tests for ceviche_challenges.primitives."""
 
-from typing import Callable
-from absl.testing import absltest
+from collections.abc import Callable
+from typing import Any
+
 import autograd
-import autograd.numpy as npa
-from ceviche_challenges import primitives
+import autograd.numpy as _autograd_numpy
 import numpy as np
+from absl.testing import absltest
+
+from ceviche_challenges import primitives
+
+# Autograd installs the NumPy API dynamically.
+npa: Any = _autograd_numpy
 
 
-def _gradient_numerical(func: Callable[[np.ndarray], float],
-                        x: np.ndarray,
-                        delta: float = 1e-7) -> np.ndarray:
-  """Helper for numerically computing the gradient of an R^n -> R^1 function."""
-  y = func(x)
-  grad = np.zeros_like(x)
-  for i in range(x.size):
-    x_delta = np.copy(x)
-    x_delta.ravel()[i] += delta
-    y_delta = func(x_delta)
-    grad.ravel()[i] = (y_delta - y) / delta
-  return grad
+def _gradient_numerical(
+    func: Callable[[np.ndarray], float], x: np.ndarray, delta: float = 1e-7
+) -> np.ndarray:
+    """Helper for numerically computing the gradient of an R^n -> R^1 function."""
+    y = func(x)
+    grad = np.zeros_like(x)
+    for i in range(x.size):
+        x_delta = np.copy(x)
+        x_delta.ravel()[i] += delta
+        y_delta = func(x_delta)
+        grad.ravel()[i] = (y_delta - y) / delta
+    return grad
 
 
 class PrimitivesTest(absltest.TestCase):
+    def test_grad_insert_design_variable(self):
+        """Test the gradient of the `insert_design_variable` primitive."""
 
-  def test_grad_insert_design_variable(self):
-    """Test the gradient of the `insert_design_variable` primitive."""
+        destination = np.ones((10, 10), dtype=np.float64)
+        design_var = np.ones((5, 5), dtype=np.float64)
+        coords = (3, 4, 8, 9)
 
-    destination = np.ones((10, 10), dtype=np.float64)
-    design_var = np.ones((5, 5), dtype=np.float64)
-    coords = (3, 4, 8, 9)
+        def func(x):
+            y0 = npa.square(x) - 1.0
+            y1 = primitives.insert_design_variable(y0, destination, coords)
+            return npa.sum(y1)
 
-    def func(x):
-      y0 = npa.square(x) - 1.0
-      y1 = primitives.insert_design_variable(y0, destination, coords)
-      return npa.sum(y1)
+        self.assertTrue(
+            np.allclose(autograd.grad(func)(design_var), _gradient_numerical(func, design_var))
+        )
 
-    self.assertTrue(
-        np.allclose(
-            autograd.grad(func)(design_var),
-            _gradient_numerical(func, design_var)))
-
-  def test_insert_design_variable_invalid(self):
-    """Test that a ValueError is thrown for invalid coords or design vars."""
-    with self.assertRaises(ValueError):
-      destination = np.ones((10, 10), dtype=np.float64)
-      design_var = np.ones((5, 5), dtype=np.float64)
-      # Negative coordinates
-      coords = (-1, 4, 4, 9)
-      primitives.insert_design_variable(design_var, destination, coords)
-    with self.assertRaises(ValueError):
-      destination = np.ones((10, 10), dtype=np.float64)
-      design_var = np.ones((5, 5), dtype=np.float64)
-      # Incorrect ordering of coordinates
-      coords = (8, 4, 3, 9)
-      primitives.insert_design_variable(design_var, destination, coords)
-    with self.assertRaises(ValueError):
-      destination = np.ones((10, 10), dtype=np.float64)
-      design_var = np.ones((5, 5), dtype=np.float64)
-      # Extending outside of the destination
-      coords = (8, 4, 13, 9)
-      primitives.insert_design_variable(design_var, destination, coords)
-    with self.assertRaises(ValueError):
-      destination = np.ones((10, 10), dtype=np.float64)
-      design_var = np.ones((15, 5), dtype=np.float64)
-      # Too large of a design variable
-      coords = (0, 4, 14, 9)
-      primitives.insert_design_variable(design_var, destination, coords)
+    def test_insert_design_variable_invalid(self):
+        """Test that a ValueError is thrown for invalid coords or design vars."""
+        with self.assertRaises(ValueError):
+            destination = np.ones((10, 10), dtype=np.float64)
+            design_var = np.ones((5, 5), dtype=np.float64)
+            # Negative coordinates
+            coords = (-1, 4, 4, 9)
+            primitives.insert_design_variable(design_var, destination, coords)
+        with self.assertRaises(ValueError):
+            destination = np.ones((10, 10), dtype=np.float64)
+            design_var = np.ones((5, 5), dtype=np.float64)
+            # Incorrect ordering of coordinates
+            coords = (8, 4, 3, 9)
+            primitives.insert_design_variable(design_var, destination, coords)
+        with self.assertRaises(ValueError):
+            destination = np.ones((10, 10), dtype=np.float64)
+            design_var = np.ones((5, 5), dtype=np.float64)
+            # Extending outside of the destination
+            coords = (8, 4, 13, 9)
+            primitives.insert_design_variable(design_var, destination, coords)
+        with self.assertRaises(ValueError):
+            destination = np.ones((10, 10), dtype=np.float64)
+            design_var = np.ones((15, 5), dtype=np.float64)
+            # Too large of a design variable
+            coords = (0, 4, 14, 9)
+            primitives.insert_design_variable(design_var, destination, coords)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

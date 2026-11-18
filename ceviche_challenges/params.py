@@ -14,22 +14,22 @@
 """Generial simulation parameters for ceviche models."""
 
 import dataclasses
-from typing import Sequence
 
 from ceviche_challenges import units as u
 
 Q = u.Quantity  # pylint: disable=invalid-name
-QSequence = Sequence[Q]  # pylint: disable=invalid-name
+QSequence = u.Sequence  # pylint: disable=invalid-name
 
 
 @dataclasses.dataclass(frozen=True)
 class CevicheSimParams:
-  """Parameters for a Ceviche simulation.
+    """Parameters for a Ceviche simulation.
 
-  Attributes:
-    resolution: the spatial resolution of the simulation grid, i.e. the side
-      length of a grid cell
-    wavelengths: a list of the wavelengths that will be simulated
-  """
-  resolution: Q
-  wavelengths: QSequence
+    Attributes:
+      resolution: the spatial resolution of the simulation grid, i.e. the side
+        length of a grid cell
+      wavelengths: a list of the wavelengths that will be simulated
+    """
+
+    resolution: Q
+    wavelengths: QSequence

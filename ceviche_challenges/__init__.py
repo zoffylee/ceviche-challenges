@@ -13,17 +13,17 @@
 # limitations under the License.
 """Ceviche photonic design challenges."""
 
-__version__ = '1.0.3'
+__version__ = "1.0.3"
 
-import ceviche_challenges.beam_splitter
-import ceviche_challenges.defs
-import ceviche_challenges.mode_converter
-import ceviche_challenges.model_base
-import ceviche_challenges.modes
-import ceviche_challenges.ops
-import ceviche_challenges.params
-import ceviche_challenges.primitives
-import ceviche_challenges.scattering
-import ceviche_challenges.units
-import ceviche_challenges.waveguide_bend
-import ceviche_challenges.wdm
+from ceviche_challenges import beam_splitter as beam_splitter
+from ceviche_challenges import defs as defs
+from ceviche_challenges import mode_converter as mode_converter
+from ceviche_challenges import model_base as model_base
+from ceviche_challenges import modes as modes
+from ceviche_challenges import ops as ops
+from ceviche_challenges import params as params
+from ceviche_challenges import primitives as primitives
+from ceviche_challenges import scattering as scattering
+from ceviche_challenges import units as units
+from ceviche_challenges import waveguide_bend as waveguide_bend
+from ceviche_challenges import wdm as wdm

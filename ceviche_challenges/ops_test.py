@@ -13,94 +13,92 @@
 # limitations under the License.
 """Tests for ceviche_challenges.ops."""
 
-from absl.testing import absltest
-from ceviche_challenges import defs
-from ceviche_challenges import ops
 import numpy as np
+from absl.testing import absltest
+
+from ceviche_challenges import defs, ops
 
 _TOL_OVERLAP_MAG = 1e-6
 
 
 class OpsTestCross(absltest.TestCase):
+    def test_unitvectors(self):
+        """Test the cross product operation on scalar unit vectors."""
 
-  def test_unitvectors(self):
-    """Test the cross product operation on scalar unit vectors."""
+        # X x X = 0
+        self.assertEqual(ops.cross((1.0, 0.0, 0.0), (1.0, 0.0, 0.0)), (0.0, 0.0, 0.0))
 
-    # X x X = 0
-    self.assertEqual(ops.cross((1., 0., 0.), (1., 0., 0.)), (0., 0., 0.))
+        # Y x Y = 0
+        self.assertEqual(ops.cross((0.0, 1.0, 0.0), (0.0, 1.0, 0.0)), (0.0, 0.0, 0.0))
 
-    # Y x Y = 0
-    self.assertEqual(ops.cross((0., 1., 0.), (0., 1., 0.)), (0., 0., 0.))
+        # Z x Z = 0
+        self.assertEqual(ops.cross((0.0, 0.0, 1.0), (0.0, 0.0, 1.0)), (0.0, 0.0, 0.0))
 
-    # Z x Z = 0
-    self.assertEqual(ops.cross((0., 0., 1.), (0., 0., 1.)), (0., 0., 0.))
+        # X x Y = Z
+        self.assertEqual(ops.cross((1.0, 0.0, 0.0), (0.0, 1.0, 0.0)), (0.0, 0.0, 1.0))
 
-    # X x Y = Z
-    self.assertEqual(ops.cross((1., 0., 0.), (0., 1., 0.)), (0., 0., 1.))
+        # -X x Y = -Z
+        self.assertEqual(ops.cross((-1.0, 0.0, 0.0), (0.0, 1.0, 0.0)), (0.0, 0.0, -1.0))
 
-    # -X x Y = -Z
-    self.assertEqual(ops.cross((-1., 0., 0.), (0., 1., 0.)), (0., 0., -1.))
+        # Y x X = -Z
+        self.assertEqual(ops.cross((0.0, 1.0, 0.0), (1.0, 0.0, 0.0)), (0.0, 0.0, -1.0))
 
-    # Y x X = -Z
-    self.assertEqual(ops.cross((0., 1., 0.), (1., 0., 0.)), (0., 0., -1.))
+        # -Y x X = Z
+        self.assertEqual(ops.cross((0.0, -1.0, 0.0), (1.0, 0.0, 0.0)), (0.0, 0.0, 1.0))
 
-    # -Y x X = Z
-    self.assertEqual(ops.cross((0., -1., 0.), (1., 0., 0.)), (0., 0., 1.))
+        # X x Z = -Y
+        self.assertEqual(ops.cross((1.0, 0.0, 0.0), (0.0, 0.0, 1.0)), (0.0, -1.0, 0.0))
 
-    # X x Z = -Y
-    self.assertEqual(ops.cross((1., 0., 0.), (0., 0., 1.)), (0., -1., 0.))
+        # Z x X = Y
+        self.assertEqual(ops.cross((0.0, 0.0, 1.0), (1.0, 0.0, 0.0)), (0.0, 1.0, 0.0))
 
-    # Z x X = Y
-    self.assertEqual(ops.cross((0., 0., 1.), (1., 0., 0.)), (0., 1., 0.))
+        # Z x Y = -X
+        self.assertEqual(ops.cross((0.0, 0.0, 1.0), (0.0, 1.0, 0.0)), (-1.0, 0.0, 0.0))
 
-    # Z x Y = -X
-    self.assertEqual(ops.cross((0., 0., 1.), (0., 1., 0.)), (-1., 0., 0.))
-
-    # Y x Z = X
-    self.assertEqual(ops.cross((0., 1., 0.), (0., 0., 1.)), (1., 0., 0.))
+        # Y x Z = X
+        self.assertEqual(ops.cross((0.0, 1.0, 0.0), (0.0, 0.0, 1.0)), (1.0, 0.0, 0.0))
 
 
 class OpsTestOverlap(absltest.TestCase):
+    def setUp(self):
+        super().setUp()
+        x = np.linspace(0.0, 2 * np.pi, 99)
+        self.a_sym = np.sin(x)
+        self.a_asym = np.cos(x)
 
-  def setUp(self):
-    super().setUp()
-    x = np.linspace(0., 2 * np.pi, 99)
-    self.a_sym = np.sin(x)
-    self.a_asym = np.cos(x)
+    def test_nonorthogonal(self):
+        """Test the overlap integral operation on non-othogonal fields.
 
-  def test_nonorthogonal(self):
-    """Test the overlap integral operation on non-othogonal fields.
+        e.g.   ∫ symmetric . (symmetric)*  ≠  0.
+        """
 
-    e.g.   ∫ symmetric . (symmetric)*  ≠  0.
-    """
+        ans = ops.overlap(
+            (0.0, 0.0, self.a_sym),
+            (0.0, -self.a_sym, 0.0),
+            defs.Direction.X_POS,
+        )
+        self.assertGreater(np.abs(ans), _TOL_OVERLAP_MAG)
 
-    ans = ops.overlap(
-        (0.0, 0.0, self.a_sym),
-        (0.0, -self.a_sym, 0.0),
-        defs.Direction.X_POS,
-    )
-    self.assertGreater(np.abs(ans), _TOL_OVERLAP_MAG)
+    def test_orthogonal(self):
+        """Test the overlap integral operation on non-othogonal fields.
 
-  def test_orthogonal(self):
-    """Test the overlap integral operation on non-othogonal fields.
+        e.g.   ∫ symmetric . (anti-symmetric)*  =  0.
+        """
 
-    e.g.   ∫ symmetric . (anti-symmetric)*  =  0.
-    """
+        ans = ops.overlap(
+            (0.0, 0.0, self.a_sym),
+            (0.0, -self.a_asym, 0.0),
+            defs.Direction.X_POS,
+        )
+        self.assertLess(np.abs(ans), _TOL_OVERLAP_MAG)
 
-    ans = ops.overlap(
-        (0.0, 0.0, self.a_sym),
-        (0.0, -self.a_asym, 0.0),
-        defs.Direction.X_POS,
-    )
-    self.assertLess(np.abs(ans), _TOL_OVERLAP_MAG)
-
-    ans = ops.overlap(
-        (0.0, 0.0, self.a_sym),
-        (0.0, self.a_asym, 0.0),
-        defs.Direction.X_POS,
-    )
-    self.assertLess(np.abs(ans), _TOL_OVERLAP_MAG)
+        ans = ops.overlap(
+            (0.0, 0.0, self.a_sym),
+            (0.0, self.a_asym, 0.0),
+            defs.Direction.X_POS,
+        )
+        self.assertLess(np.abs(ans), _TOL_OVERLAP_MAG)
 
 
-if __name__ == '__main__':
-  absltest.main()
+if __name__ == "__main__":
+    absltest.main()

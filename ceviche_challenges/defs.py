@@ -14,47 +14,46 @@
 """Definitions and types for the ceviche scattering parameters."""
 
 import enum
-from typing import Tuple, Union
 
 import numpy as np
+import torch
 
+Array = np.ndarray | torch.Tensor
 Geometry = np.ndarray
-Slice = Tuple[np.ndarray, np.ndarray]
-Field = np.ndarray
-VectorField = Tuple[Union[Field, float], Union[Field, float], Union[Field,
-                                                                    float]]
+Slice = tuple[np.ndarray, np.ndarray]
+Field = Array
+FieldComponent = Field | float | complex
+VectorField = tuple[FieldComponent, FieldComponent, FieldComponent]
 
 
 @enum.unique
 class Direction(enum.Enum):
-  """Defines a signed direction."""
-  Y_NEG = -2
-  X_NEG = -1
-  X_POS = 1
-  Y_POS = 2
+    """Defines a signed direction."""
 
-  @property
-  def sign(self):
-    """The sign (+/-) of the `Direction`."""
-    if self is self.Y_NEG or self is self.X_NEG:
-      return -1
-    else:
-      return +1
+    Y_NEG = -2
+    X_NEG = -1
+    X_POS = 1
+    Y_POS = 2
 
-  @property
-  def is_along_x(self):
-    """Is the `Direction` along the x-axis."""
-    if self is self.X_POS or self is self.X_NEG:
-      return True
-    else:
-      return False
+    @property
+    def sign(self):
+        """The sign (+/-) of the `Direction`."""
+        if self is self.Y_NEG or self is self.X_NEG:
+            return -1
+        else:
+            return +1
 
-  @property
-  def is_along_y(self):
-    """Is the `Direction` along the y-axis."""
-    return not self.is_along_x
+    @property
+    def is_along_x(self):
+        """Is the `Direction` along the x-axis."""
+        return self is self.X_POS or self is self.X_NEG
 
-  @property
-  def index(self):
-    """Integer to index the component of a `VectorField` corresponding to the `Direction`."""
-    return np.abs(self.value) - 1
+    @property
+    def is_along_y(self):
+        """Is the `Direction` along the y-axis."""
+        return not self.is_along_x
+
+    @property
+    def index(self):
+        """Integer to index the component of a `VectorField` corresponding to the `Direction`."""
+        return np.abs(self.value) - 1

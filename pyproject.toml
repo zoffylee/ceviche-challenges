@@ -20,6 +20,7 @@ dependencies = [
     "matplotlib",
     "numpy",
     "scipy",
+    "torch",
     "unyt",
 ]
 [[project.authors]]
@@ -29,7 +30,7 @@ email = "noreply@google.com"
 Homepage = "https://github.com/google/ceviche-challenges"
 
 [dependency-groups]
-dev = [ "absl-py", "pytest", "pytest-xdist" ]
+dev = [ "absl-py", "pytest", "pytest-xdist", "ruff>=0.17.3", "ty>=0.0.105" ]
 
 [tool.uv]
 index = [
@@ -48,7 +49,7 @@ module-root = ""
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-extend-exclude = [ "**/.*", "**/__pycache__", "data", "runs" ]
+extend-exclude = [ "**/.*", "**/__pycache__", "data", "external", "runs" ]
 [tool.ruff.format]
 indent-style = "space"
 quote-style = "double"
@@ -63,7 +64,7 @@ generate_python_version_classifiers = false
 table_format = "long"
 
 [tool.ty.src]
-include = [ "ceviche", "examples", "tests" ]
+include = [ "ceviche_challenges" ]
 exclude = [ ".cache", ".venv", "build", "dist", "**/__pycache__" ]
 [tool.ty.environment]
 python = ".venv"

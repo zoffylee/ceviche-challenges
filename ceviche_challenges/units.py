@@ -13,7 +13,7 @@
 # limitations under the License.
 """Definitions of compatible units, and tools for using unitted quantities."""
 
-from typing import Optional, Sequence as Sequence_
+from collections.abc import Sequence as Sequence_
 
 import numpy as np
 import unyt
@@ -28,7 +28,7 @@ Array = unyt.unyt_array  # pylint: disable=invalid-name
 
 # Type alias for an arbitrary sequence of quantities (e.g. Tuple or List of Q,
 # or an `Array`)
-Sequence = Sequence_[Quantity]  # pylint: disable=invalid-name
+Sequence = Sequence_[Quantity] | Array  # pylint: disable=invalid-name
 
 # ------------------------------------------------------------------------------
 # Define units.  PyType can't reason about the dynamics in unyt, so we disable a
@@ -49,69 +49,68 @@ _RESOLUTION_TOLERANCE = 0.0001
 
 
 class ResolutionError(Exception):
-  """Exception signaling that a quantity could not be resolved."""
-  pass
+    """Exception signaling that a quantity could not be resolved."""
 
 
-def resolve(v: Quantity, resolution: Quantity) -> int:
-  """Resolves `v` to an integer number of grid units at `resolution`.
+def resolve(v: np.ndarray, resolution: np.ndarray) -> int:
+    """Resolves `v` to an integer number of grid units at `resolution`.
 
-  Note that `v` is resolved to an integer multiple (`q`) of `resolution` if it
-  is within `_RESOLUTION_TOLERANCE * resolution` of `q * resolution`; otherwise
-  the exception `ResolutionError` is raised.
+    Note that `v` is resolved to an integer multiple (`q`) of `resolution` if it
+    is within `_RESOLUTION_TOLERANCE * resolution` of `q * resolution`; otherwise
+    the exception `ResolutionError` is raised.
 
-  Args:
-    v: a unitted-quantity;
-    resolution: a grid resolution in the same *dimension* (if not units) as `v`.
+    Args:
+      v: a quantity with units.
+      resolution: a grid resolution in the same *dimension* (if not units) as `v`.
 
-  Returns:
-    the integer number of grid units (with scale `resolution`) that equates to
-    `v`, within a numerical tolerance.
+    Returns:
+      the integer number of grid units (with scale `resolution`) that equates to
+      `v`, within a numerical tolerance.
 
-  Raises:
-    ResolutionError: if `v` is not an integral multiple of `resolution`.
-    ValueError: if `v` and `resolution` have incompatible unit dimensions.
-  """
-  resolved = _resolve_or_none(v, resolution)
-  if resolved is None:
-    raise ResolutionError(
-        "Cannot neatly resolve quantity (%r) at given resolution (%r)." %
-        (v, resolution))
-  else:
-    return resolved
+    Raises:
+      ResolutionError: if `v` is not an integral multiple of `resolution`.
+      ValueError: if `v` and `resolution` have incompatible unit dimensions.
+    """
+    resolved = _resolve_or_none(v, resolution)
+    if resolved is None:
+        raise ResolutionError(
+            f"Cannot neatly resolve quantity ({v!r}) at given resolution ({resolution!r})."
+        )
+    else:
+        return resolved
 
 
-def _check_compatible(v: Quantity, resolution: Quantity):
-  """Checks compatibility for `Quantity` and dimensions."""
-  if not (isinstance(v, Quantity) and isinstance(resolution, Quantity)):
-    raise ValueError("Arguments to `resolve` must be of type `Quantity`.")
-  if v.units.dimensions != resolution.units.dimensions:
-    raise ValueError(
-        "Arguments to `resolve` must have compatible unit dimensions.")
+def _check_compatible(v: np.ndarray, resolution: np.ndarray):
+    """Checks compatibility for `Quantity` and dimensions."""
+    if not (isinstance(v, Quantity) and isinstance(resolution, Quantity)):
+        # Preserve the public exception type for invalid quantities.
+        raise ValueError("Arguments to `resolve` must be of type `Quantity`.")  # noqa: TRY004
+    if v.units.dimensions != resolution.units.dimensions:
+        raise ValueError("Arguments to `resolve` must have compatible unit dimensions.")
 
 
 def _resolve_or_none(
-    v: Quantity,
-    resolution: Quantity,
+    v: np.ndarray,
+    resolution: np.ndarray,
     tolerance: float = _RESOLUTION_TOLERANCE,
-) -> Optional[int]:
-  """Resolves `v` on the grid with given `resolution`, or returns `None`.
+) -> int | None:
+    """Resolves `v` on the grid with given `resolution`, or returns `None`.
 
-  If `v` is not within `tolerance` of an integer multiple (`q`) of `resolution`,
-  this function returns `None`. Otherwise, it returns `q`.
+    If `v` is not within `tolerance` of an integer multiple (`q`) of `resolution`,
+    this function returns `None`. Otherwise, it returns `q`.
 
-  Args:
-    v: a unitted-quantity.
-    resolution: a grid resolution in the same *dimension* (if not units) as `v`.
-    tolerance: a float giving the tolerance of the resolution operation.
+    Args:
+      v: a unitted-quantity.
+      resolution: a grid resolution in the same *dimension* (if not units) as `v`.
+      tolerance: a float giving the tolerance of the resolution operation.
 
-  Returns:
-    the integer multiple `q` resulting from the resolution operation, or `None`.
-  """
-  _check_compatible(v, resolution)
-  count = v / resolution
-  count_rounded = np.round(count).astype(int)
-  if np.max(np.abs(count - count_rounded)) < tolerance:
-    return count_rounded
-  else:
-    return None
+    Returns:
+      the integer multiple `q` resulting from the resolution operation, or `None`.
+    """
+    _check_compatible(v, resolution)
+    count = v / resolution
+    count_rounded = np.round(count).astype(int)
+    if np.max(np.abs(count - count_rounded)) < tolerance:
+        return int(count_rounded)
+    else:
+        return None
