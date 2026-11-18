@@ -39,6 +39,7 @@ index = [
 cache-dir = "../.cache/uv"
 python-install-mirror = "https://avoidzju.mirrors.cernet.edu.cn/github-release/astral-sh/python-build-standalone"
 [tool.uv.sources]
+ceviche = { path = "external/ceviche", editable = true }
 torch = { index = "pytorch-cu126" }
 [tool.uv.build-backend]
 module-name = "ceviche_challenges"
@@ -69,3 +70,6 @@ python = ".venv"
 python-version = "3.12"
 [tool.ty.terminal]
 error-on-warning = true
+
+[tool.pytest.ini_options]
+testpaths = [ "ceviche_challenges" ]

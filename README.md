@@ -37,9 +37,13 @@ paper.
 
 ## Installation
 
-To develop with Python 3.12 and uv, run these commands from the repository root.
+Development on the `pytorch` branch uses Python 3.12 and the PyTorch fork of
+`ceviche` pinned in `external/ceviche`. With SSH access to the submodule
+server, run these commands from the repository root. uv installs the
+submodule in editable mode.
 
 ```sh
+git submodule update --init --recursive
 uv sync --locked
 uv run pytest
 uv build
