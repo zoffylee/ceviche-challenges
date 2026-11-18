@@ -37,7 +37,15 @@ paper.
 
 ## Installation
 
-`ceviche_challenges` can be installed via `pip`:
+To develop with Python 3.12 and uv, run these commands from the repository root.
+
+```sh
+uv sync --locked
+uv run pytest
+uv build
+```
+
+To install the published package with pip, run
 
 ```
 pip install ceviche_challenges

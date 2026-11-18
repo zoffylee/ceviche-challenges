@@ -1,0 +1,71 @@
+[build-system]
+build-backend = "uv_build"
+requires = [ "uv-build~=0.13.8" ]
+
+[project]
+name = "ceviche-challenges"
+version = "1.0.3"
+description = "Photonic inverse design challenge problems for Ceviche"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = [ "LICENSE" ]
+requires-python = ">=3.12,<3.13"
+classifiers = [
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "autograd",
+    "ceviche",
+    "matplotlib",
+    "numpy",
+    "scipy",
+    "unyt",
+]
+[[project.authors]]
+name = "Google LLC"
+email = "noreply@google.com"
+[project.urls]
+Homepage = "https://github.com/google/ceviche-challenges"
+
+[dependency-groups]
+dev = [ "absl-py", "pytest", "pytest-xdist" ]
+
+[tool.uv]
+index = [
+    { name = "cernet", url = "https://avoidzju.mirrors.cernet.edu.cn/pypi/web/simple/", default = true },
+    { name = "pytorch-cu126", url = "https://download.pytorch.org/whl/cu126", explicit = true },
+]
+cache-dir = "../.cache/uv"
+python-install-mirror = "https://avoidzju.mirrors.cernet.edu.cn/github-release/astral-sh/python-build-standalone"
+[tool.uv.sources]
+torch = { index = "pytorch-cu126" }
+[tool.uv.build-backend]
+module-name = "ceviche_challenges"
+module-root = ""
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = [ "**/.*", "**/__pycache__", "data", "runs" ]
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+line-ending = "auto"
+[tool.ruff.lint]
+extend-select = [ "I" ]
+
+[tool.pyproject-fmt]
+column_width = 120
+indent = 4
+generate_python_version_classifiers = false
+table_format = "long"
+
+[tool.ty.src]
+include = [ "ceviche", "examples", "tests" ]
+exclude = [ ".cache", ".venv", "build", "dist", "**/__pycache__" ]
+[tool.ty.environment]
+python = ".venv"
+python-version = "3.12"
+[tool.ty.terminal]
+error-on-warning = true
