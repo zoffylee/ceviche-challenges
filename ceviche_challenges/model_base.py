@@ -115,6 +115,8 @@ class Model(abc.ABC):
         excite_port_idxs: Sequence[int] = (0,),
         wavelengths_nm: np.ndarray | Sequence[float] | None = None,
         max_parallelizm: int | None = None,
+        *,
+        solver_options: ceviche.SolverOptions | None = None,
     ) -> tuple[torch.Tensor, torch.Tensor]: ...
 
     @overload
@@ -124,6 +126,8 @@ class Model(abc.ABC):
         excite_port_idxs: Sequence[int] = (0,),
         wavelengths_nm: np.ndarray | Sequence[float] | None = None,
         max_parallelizm: int | None = None,
+        *,
+        solver_options: ceviche.SolverOptions | None = None,
     ) -> tuple[np.ndarray, np.ndarray]: ...
 
     def simulate(
@@ -132,6 +136,8 @@ class Model(abc.ABC):
         excite_port_idxs: Sequence[int] = (0,),
         wavelengths_nm: np.ndarray | Sequence[float] | None = None,
         max_parallelizm: int | None = None,
+        *,
+        solver_options: ceviche.SolverOptions | None = None,
     ) -> tuple[defs.Array, defs.Array]:
         """Simulate the device described by the model on a design variable.
 
@@ -148,6 +154,7 @@ class Model(abc.ABC):
           max_parallelizm: Maximum number of CPU threads executing simulations.
             By default, CPU runs one task per excitation port and wavelength.
             CUDA simulations run sequentially on the caller's stream.
+          solver_options: Optional sparse-solver settings passed to Ceviche.
 
         Returns:
           s_params: Complex scattering parameters with axes for wavelength,
@@ -183,17 +190,21 @@ class Model(abc.ABC):
         if isinstance(design_variable, Box):
             with torch.enable_grad():
                 design = as_tensor(getval(design_variable)).requires_grad_()
-                outputs = self._simulate_tensor(design, excite_port_idxs, omegas, max_parallelizm)
+                outputs = self._simulate_tensor(
+                    design, excite_port_idxs, omegas, max_parallelizm, solver_options
+                )
             return _numpy_with_torch_vjp(design_variable, design, outputs)
 
         s_params, fields = self._simulate_tensor(
-            design_variable, excite_port_idxs, omegas, max_parallelizm
+            design_variable, excite_port_idxs, omegas, max_parallelizm, solver_options
         )
         if isinstance(design_variable, torch.Tensor):
             return s_params, fields
         return to_numpy(s_params), to_numpy(fields)
 
-    def _simulate_tensor(self, design_variable, excite_port_idxs, omegas, max_parallelizm):
+    def _simulate_tensor(
+        self, design_variable, excite_port_idxs, omegas, max_parallelizm, solver_options
+    ):
         pml_width = self.pml_width
         dl = self.dl
         epsilon_r = as_tensor(self.epsilon_r(design_variable))
@@ -207,7 +218,9 @@ class Model(abc.ABC):
             omega, excite_port_idx = task
             # Torch's grad and inference modes are local to each worker thread.
             with torch.inference_mode(inference_mode), torch.set_grad_enabled(grad_enabled):
-                sim = ceviche.fdfd_ez(omega, dl, epsilon_r, [pml_width, pml_width])
+                sim = ceviche.fdfd_ez(
+                    omega, dl, epsilon_r, [pml_width, pml_width], solver_options=solver_options
+                )
                 source = ports[excite_port_idx].source_fdfd(omega, dl, epsilon_r_bg)
                 hx, hy, ez = sim.solve(source)
                 incoming, outgoing = zip(

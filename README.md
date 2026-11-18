@@ -81,7 +81,9 @@ s_params, fields = model.simulate(design)
 
 Pass a Torch tensor to get Torch outputs on the same device and differentiate a
 real-valued objective. Use a `float64` tensor for double precision. To run on an
-available CUDA device, create the tensor with `device="cuda"`.
+available CUDA device, create the tensor with `device="cuda"`. To tune the
+iterative solver, pass `solver_options=ceviche.SolverOptions(...)` to
+`simulate()`.
 
 ```python
 import torch
